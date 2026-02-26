@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MediBridge | Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #43cea2, #185a9d);
+        }
+
+        .container {
+            background: #f1f1f1;
+            width: 380px;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            background: #dfe6ef;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #1f4f8f;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #153a66;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .register {
+            margin-top: 15px;
+            display: block;
+            color: #1e4ed8;
+            text-decoration: none;
+        }
+
+        .register:hover {
+            text-decoration: underline;
+        }
+
+        @media(max-width: 768px) {
+            .container {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h2>🩺 MediBridge Login</h2>
+
+        <!-- Language -->
+        <select onchange="changeLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="bn">বাংলা</option>
+            <option value="hi">हिन्दी</option>
+        </select>
+
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+
+        <select id="role">
+            <option value="">Select Role</option>
+            <option value="Patient">Patient</option>
+            <option value="Caretaker">Caretaker</option>
+        </select>
+
+        <button onclick="login()">Login</button>
+
+        <p id="message" class="error"></p>
+
+        <a href="create-account.html" class="register">
+            Don't have account? Create Account
+        </a>
+
+    </div>
+
+    <script>
+
+        let currentLang = "en";
+
+        const translations = {
+            en: {
+                title: "🩺 MediBridge Login",
+                login: "Login",
+                register: "Don't have account? Create Account",
+                error: "Invalid username, password or role.",
+                empty: "Please fill all fields.",
+                success: "Login Successful! Redirecting..."
+            },
+            bn: {
+                title: "🩺 মেডিব্রিজ লগইন",
+                login: "লগইন",
+                register: "একাউন্ট নেই? তৈরি করুন",
+                error: "ভুল ইউজারনেম, পাসওয়ার্ড বা রোল।",
+                empty: "সব ঘর পূরণ করুন।",
+                success: "সফল লগইন! রিডাইরেক্ট হচ্ছে..."
+            },
+            hi: {
+                title: "🩺 मेडिब्रिज लॉगिन",
+                login: "लॉगिन",
+                register: "अकाउंट नहीं है? बनाएं",
+                error: "गलत यूज़रनेम, पासवर्ड या रोल।",
+                empty: "सभी फ़ील्ड भरें।",
+                success: "सफल लॉगिन! रीडायरेक्ट हो रहा है..."
+            }
+        };
+
+        // Auto redirect if already logged in
+        window.onload = function () {
+            let loggedIn = JSON.parse(localStorage.getItem("loggedInUser"));
+            if (loggedIn) {
+                window.location.href = "dashboard.html";
+            }
+        };
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.querySelector("h2").innerText = translations[lang].title;
+            document.querySelector("button").innerText = translations[lang].login;
+            document.querySelector(".register").innerText = translations[lang].register;
+        }
+        async function login() {
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const role = document.getElementById("role").value;
+            const message = document.getElementById("message");
+
+            message.innerText = "";
+
+            if (!email || !password || !role) {
+                message.innerText = "Please fill all fields.";
+                return;
+            }
+
+            try {
+
+                const response = await fetch("http://localhost:3000/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    message.innerText = data.message;
+                    return;
+                }
+
+                // ✅ Save token + user
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("loggedInUser", JSON.stringify(data.user));
+
+                // ✅ Go to dashboard
+                window.location.href = "dashboard.html";
+
+            } catch (error) {
+                message.innerText = "Backend not running!";
+            }
+        }
+
+
+    </script>
+
+</body>
+
+</html>

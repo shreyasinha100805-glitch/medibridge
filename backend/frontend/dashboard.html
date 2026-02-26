@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MediBridge | Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #43cea2, #185a9d);
+            color: white;
+        }
+
+        .card {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        input,
+        button,
+        select {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+
+        button {
+            background: #185a9d;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0f3e6b;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #f2f2f2;
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .logout {
+            background: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>🩺 MediBridge</h2>
+
+    <select id="languageSelect" onchange="setLanguage()">
+        <option value="en">English</option>
+        <option value="bn">বাংলা</option>
+        <option value="hi">हिन्दी</option>
+    </select>
+
+    <div id="dashboard">
+
+        <button onclick="logout()">Logout</button>
+
+        <p id="welcome"></p>
+        <p id="role"></p>
+
+        <!-- PATIENT PANEL -->
+        <div id="patientPanel" class="card">
+            <h3 id="addMedText">Add Medicine</h3>
+
+            <input type="text" id="medName" placeholder="Medicine Name">
+            <input type="time" id="medTime">
+
+            <select id="medDays">
+                <option value="1">1 Day</option>
+                <option value="7">7 Days</option>
+                <option value="15">15 Days</option>
+                <option value="30">30 Days</option>
+            </select>
+
+            <button onclick="addMedicine()">Add</button>
+
+            <h3 id="yourMedText">Your Medicines</h3>
+            <ul id="medicineList"></ul>
+
+            <hr>
+
+            <h3>📊 Daily Report</h3>
+            <p id="reportSummary"></p>
+        </div>
+
+        <!-- CARETAKER PANEL -->
+        <div id="caretakerPanel" class="card" style="display:none;">
+            <h3>Patient Taken Medicines</h3>
+            <ul id="caretakerList"></ul>
+        </div>
+
+        <!-- HOSPITAL -->
+        <div class="card">
+            <h3 id="hospitalText">Nearest Hospitals</h3>
+            <button onclick="getLocation()">Find Nearest Hospital</button>
+            <ul id="hospitalList"></ul>
+        </div>
+
+    </div>
+
+    <script>
+
+        /* ================= AUTO USER (NO LOGIN PAGE NEEDED) ================= */
+        const token = localStorage.getItem("token");
+        const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
+
+        if (!token || !currentUser) {
+            alert("Please login first");
+            window.location.href = "login.html";
+        }
+
+        if (!currentUser) {
+            alert("Please login first");
+            window.location.href = "login.html";
+        }
+
+
+        document.getElementById("welcome").innerText =
+            "Welcome: " + currentUser.username;
+
+        document.getElementById("role").innerText =
+            "Role: " + currentUser.role;
+
+        if (currentUser.role === "Caretaker") {
+            document.getElementById("patientPanel").style.display = "none";
+            document.getElementById("caretakerPanel").style.display = "block";
+            loadCaretakerView();
+        }
+
+        /* ================= ADD MEDICINE ================= */
+        async function addMedicine() {
+
+            const token = localStorage.getItem("token");
+
+            const name = medName.value.trim();
+            const time = medTime.value;
+            const category = "Tablet";
+
+            if (!name || !time) {
+                alert("Enter medicine name and time");
+                return;
+            }
+
+            const response = await fetch("http://localhost:3000/medicines", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ name, time, category })
+            });
+
+            const data = await response.json();
+
+            alert(data.message);
+
+            loadMedicines();
+        }
+        /* ================= GET TODAY INDEX ================= */
+        async function getTodayIndex(med) {
+            let start = new Date(med.startDate);
+            let today = new Date();
+            return Math.floor((today - start) / (1000 * 60 * 60 * 24));
+        }
+
+        /* ================= LOAD MEDICINES ================= */
+        async function loadMedicines() {
+
+            const token = localStorage.getItem("token");
+
+            const response = await fetch("http://localhost:3000/medicines", {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+            const medicines = await response.json();
+
+            medicineList.innerHTML = "";
+
+            medicines.forEach(med => {
+
+                medicineList.innerHTML += `
+            <li>
+                ${med.name} - ${med.time}
+                ${med.taken ? "✅ Taken" : `
+                <button onclick="markTaken(${med.id})">
+                    Mark Taken
+                </button>`}
+            </li>
+        `;
+            });
+        }
+        /* ================= MARK TAKEN ================= */
+        async function markTaken(id) {
+
+            const token = localStorage.getItem("token");
+
+            const response = await fetch(
+                `http://localhost:3000/medicines/${id}/taken`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            alert(data.message);
+
+            loadMedicines();
+        }
+        /* ================= DAILY REPORT ================= */
+        async function loadReport() {
+
+            const token = localStorage.getItem("token");
+
+            const response = await fetch("http://localhost:3000/medicines", {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+            const medicines = await response.json();
+
+            let taken = 0;
+            let pending = 0;
+
+            medicines.forEach(med => {
+                if (med.taken) {
+                    taken++;
+                } else {
+                    pending++;
+                }
+            });
+
+            document.getElementById("reportSummary").innerHTML = `
+        ✅ Taken Today: ${taken}<br>
+        ⏳ Pending: ${pending}
+    `;
+        }
+
+        /* ================= CARETAKER VIEW ================= */
+        async function loadCaretakerView() {
+
+            const token = localStorage.getItem("token");
+
+            const response = await fetch("http://localhost:3000/caretaker/taken", {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+            const medicines = await response.json();
+
+            const container = document.getElementById("caretakerList");
+            container.innerHTML = "";
+
+            if (medicines.length === 0) {
+                container.innerHTML = "<li>No medicines taken yet.</li>";
+                return;
+            }
+
+            medicines.forEach(med => {
+
+                container.innerHTML += `
+            <li>
+                👤 Patient ID: ${med.user_id} <br>
+                💊 Medicine: ${med.name} <br>
+                🕒 Time: ${med.time} <br>
+                📅 Taken Date: ${med.taken_date}
+            </li>
+        `;
+            });
+        }
+
+        /* ================= REMINDER ================= */
+        function checkReminder() {
+
+            let now = new Date();
+            let currentTime = now.toTimeString().slice(0, 5);
+
+            medicines
+                .filter(m => m.user === currentUser.username)
+                .forEach(med => {
+
+                    let todayIndex = getTodayIndex(med);
+
+                    if (todayIndex >= 0 &&
+                        todayIndex < med.totalDays &&
+                        !med.dailyStatus[todayIndex] &&
+                        med.time === currentTime) {
+
+                        if (Notification.permission === "granted") {
+                            new Notification("💊 Medicine Reminder", {
+                                body: "Time to take " + med.name
+                            });
+                        }
+
+                        let audio = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+                        audio.play();
+                    }
+                });
+        }
+
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
+
+        setInterval(checkReminder, 60000);
+
+        /* ================= HOSPITAL ================= */
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+
+                    hospitalList.innerHTML =
+                        `<li><a target="_blank"
+                href="https://www.google.com/maps/search/hospital/@${lat},${lon},15z">
+                View Nearest Hospitals</a></li>`;
+                });
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("loggedInUser");
+            window.location.href = "login.html";
+        }
+
+
+        /* ================= LANGUAGE ================= */
+        const translations = {
+            en: { add: "Add Medicine", your: "Your Medicines", hospital: "Nearest Hospitals" },
+            bn: { add: "ওষুধ যোগ করুন", your: "আপনার ওষুধসমূহ", hospital: "নিকটস্থ হাসপাতাল" },
+            hi: { add: "दवा जोड़ें", your: "आपकी दवाइयाँ", hospital: "नजदीकी अस्पताल" }
+        };
+
+        function setLanguage() {
+            let lang = languageSelect.value;
+            addMedText.innerText = translations[lang].add;
+            yourMedText.innerText = translations[lang].your;
+            hospitalText.innerText = translations[lang].hospital;
+        }
+
+        /* INITIAL LOAD */
+        loadMedicines();
+        loadReport();
+
+    </script>
+
+</body>
+
+</html>

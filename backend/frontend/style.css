@@ -1,0 +1,212 @@
+/* ================== General ================== */
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    padding: 20px;
+}
+
+.container {
+    max-width: 700px;
+    margin: auto;
+}
+
+/* ================== Headings ================== */
+h1 {
+    text-align: center;
+    font-size: 42px;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    text-align: center;
+    color: white;
+    font-size: 18px;
+    margin-bottom: 30px;
+}
+
+/* ================== Cards ================== */
+.card {
+    background: white;
+    padding: 25px;
+    margin-bottom: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    animation: fadeIn 0.5s ease;
+    text-align: center;
+}
+
+.card h2 {
+    font-size: 26px;
+    margin-bottom: 15px;
+}
+
+/* ================== Inputs & Select ================== */
+input,
+select {
+    width: 100%;
+    max-width: 400px;
+    padding: 14px;
+    font-size: 18px;
+    margin: 10px auto;
+    border-radius: 12px;
+    border: 2px solid #ddd;
+    display: block;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: #4facfe;
+}
+
+/* ================== Buttons ================== */
+button {
+    width: 100%;
+    max-width: 400px;
+    padding: 14px;
+    font-size: 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin: 10px auto;
+    display: block;
+}
+
+button:hover {
+    background: #218838;
+    transform: scale(1.03);
+}
+
+/* Logout Button */
+.logout-btn {
+    background: #dc3545;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+}
+
+/* ================== Medicine List ================== */
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    background: #f8f9fa;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 12px;
+    font-size: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Status Colors */
+.taken {
+    background: #d4edda;
+}
+
+.not-taken {
+    background: #f8d7da;
+}
+
+/* ================== Action Buttons ================== */
+.action-btn {
+    margin-left: 8px;
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.take-btn {
+    background: #007bff;
+    color: white;
+}
+
+.take-btn:hover {
+    background: #0056b3;
+}
+
+.delete-btn {
+    background: red;
+    color: white;
+}
+
+.delete-btn:hover {
+    background: darkred;
+}
+
+/* ================== Tablet Reminder ================== */
+#tablet-reminder {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ff6600;
+    margin-top: 15px;
+}
+
+/* ================== Notification ================== */
+#notification {
+    background: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 16px;
+    margin-top: 10px;
+    display: none;
+}
+
+/* ================== Responsive ================== */
+@media (max-width: 600px) {
+
+    h1 {
+        font-size: 30px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    input,
+    select,
+    button {
+        font-size: 16px;
+    }
+
+    li {
+        font-size: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .action-btn {
+        margin-top: 6px;
+    }
+}
+
+/* ================== Fade In ================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

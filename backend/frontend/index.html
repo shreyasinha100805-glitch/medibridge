@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediBridge</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #43cea2, #185a9d);
+            color: white;
+            padding: 15px;
+        }
+
+        /* HEADER */
+        .header {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        /* CARD DESIGN */
+        .card {
+            background: #f1f1f1;
+            color: black;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        /* INPUTS */
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        /* BUTTONS */
+        button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .blue-btn {
+            background: #2b5c93;
+            color: white;
+        }
+
+        .blue-btn:hover {
+            background: #1d4168;
+        }
+
+        .logout-btn {
+            background: red;
+            color: white;
+            margin: 10px 0;
+        }
+
+        /* LIST */
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #e7e7e7;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        /* Tablet Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">🩺 MediBridge</div>
+
+    <select id="languageSelect" onchange="setLanguage()">
+        <option value="en">English</option>
+        <option value="bn">বাংলা</option>
+        <option value="hi">हिन्दी</option>
+    </select>
+
+    <button class="logout-btn" onclick="logout()">Logout</button>
+
+    <p id="welcome">Welcome: s2</p>
+    <p id="roleText">Role: Patient</p>
+
+    <!-- ADD MEDICINE -->
+    <div class="card">
+        <h3>Add Medicine</h3>
+        <input type="text" id="medName" placeholder="Medicine Name">
+        <input type="time" id="medTime">
+        <select id="medDays">
+            <option value="1">1 Day</option>
+            <option value="7">7 Days</option>
+            <option value="13">13 Days</option>
+            <option value="30">30 Days</option>
+        </select>
+        <button class="blue-btn" onclick="addMedicine()">Add</button>
+
+        <h3>Your Medicines</h3>
+        <input type="text" id="searchMedicine" placeholder="Search Medicine..." onkeyup="searchMedicine()">
+        <ul id="medicineList"></ul>
+    </div>
+
+    <!-- NEAREST HOSPITAL -->
+    <div class="card">
+        <h3>Nearest Hospitals</h3>
+        <button class="blue-btn" onclick="getLocation()">Find Nearest Hospital</button>
+        <ul id="hospitalList"></ul>
+    </div>
+
+    <script>
+
+        let medicines = JSON.parse(localStorage.getItem("medicines")) || [];
+
+        /* ADD MEDICINE */
+        function addMedicine() {
+            let name = document.getElementById("medName").value.trim();
+            let time = document.getElementById("medTime").value;
+            let days = parseInt(document.getElementById("medDays").value);
+
+            if (!name || !time || !days) {
+                alert("Enter medicine name, time, and duration");
+                return;
+            }
+
+            medicines.push({
+                name,
+                time,
+                totalDays: days,
+                takenDays: 0,
+                dailyStatus: Array(days).fill(false),
+                startDate: new Date().toISOString()
+            });
+
+            localStorage.setItem("medicines", JSON.stringify(medicines));
+            document.getElementById("medName").value = "";
+            document.getElementById("medTime").value = "";
+            document.getElementById("medDays").value = "1";
+
+            loadMedicines();
+        }
+        /* LOAD */
+        function loadMedicines() {
+            let list = document.getElementById("medicineList");
+            list.innerHTML = "";
+
+            medicines.forEach((med, medIndex) => {
+                let li = document.createElement("li");
+                let dailyButtons = "";
+
+                med.dailyStatus.forEach((taken, dayIndex) => {
+                    dailyButtons += `<button class="blue-btn" style="margin:2px;" onclick="markTaken(${medIndex}, ${dayIndex})">
+                ${taken ? "✓" : dayIndex + 1}</button>`;
+                });
+
+                li.innerHTML = `<b>${med.name}</b> - ${med.time} <br>
+        Taken: ${med.takenDays} / ${med.totalDays} days <br>
+        ${dailyButtons}`;
+                list.appendChild(li);
+            });
+        }
+        /* SEARCH */
+        function searchMedicine() {
+            let value = document.getElementById("searchMedicine").value.toLowerCase();
+            let list = document.getElementById("medicineList");
+            list.innerHTML = "";
+
+            medicines
+                .filter(m => m.name.toLowerCase().includes(value))
+                .forEach((med, index) => {
+                    let li = document.createElement("li");
+                    li.innerHTML = `
+            ${med.name} - ${med.time}
+            <button class="blue-btn" onclick="markTaken(${index})">
+            ${med.taken ? "Taken" : "Mark Taken"}
+            </button>
+        `;
+                    list.appendChild(li);
+                });
+        }
+
+        /* MARK TAKEN */
+        function markTaken(medIndex, dayIndex) {
+            if (!medicines[medIndex].dailyStatus[dayIndex]) {
+                medicines[medIndex].dailyStatus[dayIndex] = true;
+                medicines[medIndex].takenDays += 1;
+                localStorage.setItem("medicines", JSON.stringify(medicines));
+                loadMedicines();
+            }
+        }
+
+        /* LANGUAGE */
+        function setLanguage() {
+            let lang = document.getElementById("languageSelect").value;
+
+            if (lang === "bn") {
+                document.querySelector("h3").innerText = "ঔষধ যোগ করুন";
+            }
+            if (lang === "hi") {
+                document.querySelector("h3").innerText = "दवा जोड़ें";
+            }
+        }
+
+        /* LOCATION */
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    let lat = pos.coords.latitude;
+                    let lon = pos.coords.longitude;
+
+                    document.getElementById("hospitalList").innerHTML =
+                        `<li><a target="_blank"
+            href="https://www.google.com/maps/search/hospital/@${lat},${lon},15z">
+            View Nearest Hospitals
+            </a></li>`;
+                });
+            }
+        }
+
+        function checkReminders() {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+            let now = new Date();
+            medicines.forEach(med => {
+                med.dailyStatus.forEach((taken, dayIndex) => {
+                    let medTimeParts = med.time.split(":");
+                    let medDate = new Date(med.startDate);
+                    medDate.setDate(medDate.getDate() + dayIndex);
+                    medDate.setHours(parseInt(medTimeParts[0]), parseInt(medTimeParts[1]), 0, 0);
+
+                    if (!taken && Math.abs(now - medDate) < 5 * 60 * 1000) {
+                        new Notification("Medicine Reminder", {
+                            body: `Take ${med.name} now (${dayIndex + 1}/${med.totalDays})`
+                        });
+                    }
+                });
+            });
+        }
+
+        setInterval(checkReminders, 60 * 1000); // check every minute
+
+        function logout() {
+            alert("Logged Out");
+        }
+
+        loadMedicines();
+
+    </script>
+
+</body>
+
+</html>
