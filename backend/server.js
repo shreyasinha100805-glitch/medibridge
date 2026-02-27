@@ -297,7 +297,7 @@ cron.schedule("* * * * *", () => {
             if (err) return console.error(err);
 
             rows.forEach(m => {
-                console.log(`🔔 Reminder triggered for ${med.name}`);
+                console.log(`🔔 Reminder triggered for ${row.name}`);
             });
         }
     );
