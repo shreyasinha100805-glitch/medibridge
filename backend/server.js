@@ -1,6 +1,7 @@
-// =======================
+/// =======================
 // MediBridge Backend Server
 // =======================
+require("dotenv").config();
 
 const express = require("express");
 const mysql = require("mysql2");
@@ -22,16 +23,18 @@ const JWT_SECRET = "medibridge_secret_key";
 // DATABASE
 // =======================
 const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "12345",
-    database: "medibridge_1"
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT)
 });
-
 db.connect(err => {
     if (err) throw err;
     console.log("DB connected ✅");
 });
+
+console.log(process.env.DB_USER);
 
 // =======================
 // JWT MIDDLEWARE
@@ -297,7 +300,7 @@ cron.schedule("* * * * *", () => {
             if (err) return console.error(err);
 
             rows.forEach(m => {
-                console.log(`🔔 Reminder triggered for ${row.name}`);
+                console.log(`🔔 Reminder triggered for ${m.name}`);
             });
         }
     );
@@ -315,6 +318,8 @@ app.get("/", (req, res) => {
 // =======================
 // START SERVER
 // =======================
-app.listen(3000, () => {
-    console.log("Server running on port 3000 🚀");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} 🚀`);
 });

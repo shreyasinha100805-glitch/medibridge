@@ -1,19 +1,29 @@
+// ================== db.js ==================
 const mysql = require("mysql2");
 
+// Create connection pool (better for production)
 const db = mysql.createConnection({
-  host: "containers-us-west-xxx.railway.app",
-  user: "root",
-  password: "your_password",
-  database: "railway",
-  port: 6543
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT)
 });
+waitForConnections: true;
+connectionLimit: 10;
+queueLimit: 0;
 
-db.connect(err => {
-  if (err) {
-    console.error("DB connection failed:", err);
-  } else {
-    console.log("DB connected ✅");
-  }
-});
+// Promise version (for async/await)
+const promiseDb = db.promise();
 
-module.exports = db;
+// Test connection
+promiseDb.getConnection()
+    .then(connection => {
+        console.log("Connected to Railway MySQL ✅");
+        connection.release();
+    })
+    .catch(err => {
+        console.error("Database connection failed ❌", err);
+    });
+
+module.exports = promiseDb;
