@@ -1,28 +1,19 @@
-// ================== db.js ==================
 const mysql = require("mysql2");
 
-// Create connection pool (better than single connection)
-const db = mysql.createPool({
-    host: "localhost",
-    user: "root",
-    password: "12345",
-    database: "medibridge",
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+const db = mysql.createConnection({
+  host: "containers-us-west-xxx.railway.app",
+  user: "root",
+  password: "your_password",
+  database: "railway",
+  port: 6543
 });
 
-// Use promise version (important for async/await)
-const promiseDb = db.promise();
+db.connect(err => {
+  if (err) {
+    console.error("DB connection failed:", err);
+  } else {
+    console.log("DB connected ✅");
+  }
+});
 
-// Test connection
-promiseDb.getConnection()
-    .then(connection => {
-        console.log("Connected to MySQL ✅");
-        connection.release();
-    })
-    .catch(err => {
-        console.error("Database connection failed ❌", err);
-    });
-
-module.exports = promiseDb;
+module.exports = db;
