@@ -203,47 +203,44 @@
                 return;
             }
 
-            try {
+        try {
+            const response = await fetch("http://localhost:3000/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    role   // "patient" or "caretaker"
+                })
+            });
 
-                const response = await fetch("http://localhost:3000/signup", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        username,
-                        email,
-                        password,
-                        role
-                    })
-                });
+            const data = await response.json();
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    message.innerText = data.message || "Signup failed.";
-                    message.classList.add("error");
-                    return;
-                }
-
-                message.innerText = "Account Created Successfully! Redirecting to login...";
-                message.classList.add("success");
-
-                // Clear form
-                document.getElementById("username").value = "";
-                document.getElementById("email").value = "";
-                document.getElementById("password").value = "";
-                document.getElementById("confirm").value = "";
-                document.getElementById("role").value = "";
-
-                setTimeout(() => {
-                    window.location.href = "login.html";
-                }, 1500);
-
-            } catch (error) {
-                message.innerText = "Cannot connect to server. Make sure backend is running.";
+            if (!response.ok) {
+                message.innerText = data.message || "Signup failed.";
                 message.classList.add("error");
+                return;
             }
+
+            message.innerText = "Account Created Successfully! Redirecting to login...";
+            message.classList.add("success");
+
+            // Clear form
+            document.getElementById("username").value = "";
+            document.getElementById("email").value = "";
+            document.getElementById("password").value = "";
+            document.getElementById("confirm").value = "";
+            document.getElementById("role").value = "";
+
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 1500);
+
+        } catch (error) {
+            message.innerText = "Cannot connect to server. Make sure backend is running.";
+            message.classList.add("error");
+        }
         }
 
         function goToLogin() {

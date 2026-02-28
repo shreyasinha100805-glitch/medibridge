@@ -3,8 +3,9 @@
 // =======================
 require("dotenv").config();
 
+
 const express = require("express");
-const mysql = require("mysql2");
+const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
@@ -14,312 +15,159 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// =======================
-// CONFIG
-// =======================
-const JWT_SECRET = "medibridge_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET || "medibridge_secret";
 
 // =======================
 // DATABASE
-// =======================
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: Number(process.env.DB_PORT)
-});
-db.connect(err => {
-    if (err) throw err;
-    console.log("DB connected ✅");
+const db = new Pool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-console.log(process.env.DB_USER);
+// TEST DB
+db.connect()
+  .then(() => console.log("DB Connected"))
+  .catch(err => console.error("DB Error", err));
 
-// =======================
-// JWT MIDDLEWARE
-// =======================
-function verifyToken(req, res, next) {
-
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-        return res.status(403).json({ message: "No token provided" });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-
-    jwt.verify(token, "MEDIBRIDGE_SECRET_123", (err, decoded) => {
-
-        if (err) {
-            console.log("JWT Error:", err.message); // Debug
-            return res.status(401).json({ message: "Invalid token" });
-        }
-
-        req.user = decoded;
-        next();
-    });
-}
-
-// =======================
-// SIGNUP (MATCHES DB)
-// =======================
+// SIGNUP
 app.post("/signup", async (req, res) => {
 
-    const { username, email, password, role } = req.body;
+  const { username, email, password, role } = req.body;
 
-    if (!username || !email || !password || !role) {
-        return res.status(400).json({ message: "All fields required" });
+  try {
+
+    const userCheck = await db.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
+
+    if (userCheck.rows.length > 0) {
+      return res.json({ message: "User exists" });
     }
 
-    db.query(
-        "SELECT id FROM users WHERE email=?",
-        [email],
-        async (err, rows) => {
+    const hash = await bcrypt.hash(password, 10);
 
-            if (err) return res.status(500).json(err);
-
-            if (rows.length > 0)
-                return res.status(400).json({ message: "User already exists" });
-
-            const hash = await bcrypt.hash(password, 10);
-
-            db.query(
-                "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-                [username, email, hash, role],
-                (err) => {
-
-                    if (err) return res.status(500).json(err);
-
-                    res.json({ message: "User registered successfully ✅" });
-                }
-            );
-        }
+    await db.query(
+      "INSERT INTO users(username,email,password,role) VALUES($1,$2,$3,$4)",
+      [username, email, hash, role]
     );
-});
-// =======================
-// LOGIN (MATCHES DB)
-// =======================
-app.post("/login", (req, res) => {
 
-    const { email, password } = req.body;
+    res.json({ message: "User created" });
 
-    if (!email || !password)
-        return res.status(400).json({ message: "Missing fields" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err);
+  }
 
-    db.query(
-        "SELECT * FROM users WHERE email=?",
-        [email],
-        async (err, rows) => {
-
-            if (err) return res.status(500).json(err);
-
-            if (rows.length === 0)
-                return res.status(400).json({ message: "User not found" });
-
-            const user = rows[0];
-
-            const match = await bcrypt.compare(password, user.password);
-
-            if (!match)
-                return res.status(400).json({ message: "Wrong password" });
-
-            const token = jwt.sign(
-                {
-                    id: user.id,
-                    role: user.role,
-                    email: user.email
-                },
-                "MEDIBRIDGE_SECRET_123", // 🔥 SAME everywhere
-                { expiresIn: "1h" }
-            );
-
-            res.json({
-                token,
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    email: user.email,
-                    role: user.role
-                }
-            });
-        }
-    );
 });
 
-// =======================
+// LOGIN
+app.post("/login", async (req, res) => {
+
+  const { email, password } = req.body;
+
+  try {
+
+    const result = await db.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ message: "User not found" });
+    }
+
+    const user = result.rows[0];
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      return res.json({ message: "Wrong password" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      JWT_SECRET
+    );
+
+    res.json({ token });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err);
+  }
+
+});
+
 // ADD MEDICINE
-// =======================
-app.post("/medicines", verifyToken, (req, res) => {
+app.post("/medicines", async (req, res) => {
 
-    if (req.user.role !== "Patient")
-        return res.status(403).json({ message: "Only patients allowed" });
+  const { user_id, name, time, category } = req.body;
 
-    const { name, time, category } = req.body;
+  try {
 
-    if (!name || !time || !category)
-        return res.status(400).json({ message: "All fields required" });
-
-    db.query(
-        "INSERT INTO medicines (user_id,name,time,category,taken) VALUES (?,?,?,?,0)",
-        [req.user.id, name, time, category],
-        err => {
-
-            if (err) return res.status(500).json(err);
-
-            res.json({ message: "Medicine added ✅" });
-        }
+    await db.query(
+      "INSERT INTO medicines(user_id,name,time,category) VALUES($1,$2,$3,$4)",
+      [user_id, name, time, category]
     );
+
+    res.json({ message: "Medicine added ✅" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err);
+  }
+
 });
 
 // =======================
 // GET MEDICINES
-// =======================
-app.get("/medicines", verifyToken, (req, res) => {
+app.get("/medicines/:user", async (req, res) => {
 
-    let sql, values = [];
+  try {
 
-    if (req.user.role === "Caretaker") {
-        sql = "SELECT * FROM medicines";
-    } else {
-        sql = "SELECT * FROM medicines WHERE user_id=?";
-        values = [req.user.id];
-    }
-
-    db.query(sql, values, (err, rows) => {
-
-        if (err) return res.status(500).json(err);
-
-        res.json(rows);
-    });
-});
-
-// =======================
-// GET TAKEN MEDICINES (CARETAKER)
-// =======================
-app.get("/caretaker/taken", verifyToken, (req, res) => {
-
-    if (req.user.role !== "Caretaker") {
-        return res.status(403).json({ message: "Not allowed" });
-    }
-
-    db.query(
-        "SELECT * FROM medicines WHERE taken = 1",
-        (err, rows) => {
-            if (err) return res.status(500).json(err);
-            res.json(rows);
-        }
+    const result = await db.query(
+      "SELECT * FROM medicines WHERE user_id=$1",
+      [req.params.user]
     );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+  }
+
 });
 
-// =======================
-// MARK MEDICINE AS TAKEN
-// =======================
-app.put('/medicines/:id/taken', verifyToken, (req, res) => {
-
-    const medicineId = req.params.id;
-    const userId = req.user.id;
-
-    const sql = `
-        UPDATE medicines
-        SET taken = 1,
-            taken_date = CURDATE()
-        WHERE id = ? AND user_id = ?
-    `;
-
-    db.query(sql, [medicineId, userId], (err, result) => {
-
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ message: "DB error" });
-        }
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Medicine not found" });
-        }
-
-        res.json({ message: "Medicine marked as taken ✅" });
-    });
-});
-// =======================
-// DELETE MEDICINE
-// =======================
-app.delete("/medicines/:id", verifyToken, (req, res) => {
-
-    db.query(
-        "DELETE FROM medicines WHERE id=? AND user_id=?",
-        [req.params.id, req.user.id],
-        err => {
-
-            if (err) return res.status(500).json(err);
-
-            res.json({ message: "Deleted ✅" });
-        }
-    );
-});
-
-app.get("/caretaker/patients", verifyToken, (req, res) => {
-
-    if (req.user.role !== "Caretaker")
-        return res.status(403).json({ message: "Access denied" });
-
-    db.query(
-        "SELECT id, email FROM users WHERE caretaker_id=?",
-        [req.user.id],
-        (err, rows) => {
-            if (err) return res.status(500).json(err);
-            res.json(rows);
-        }
-    );
-});
-
-app.get("/caretaker/patient/:id", verifyToken, (req, res) => {
-
-    if (req.user.role !== "Caretaker")
-        return res.status(403).json({ message: "Access denied" });
-
-    db.query(
-        "SELECT * FROM medicines WHERE user_id=?",
-        [req.params.id],
-        (err, rows) => {
-            if (err) return res.status(500).json(err);
-            res.json(rows);
-        }
-    );
-});
-
-// =======================
 // CRON REMINDER
-// =======================
-cron.schedule("* * * * *", () => {
+cron.schedule("* * * * *", async () => {
 
-    db.query(
-        "SELECT * FROM medicines WHERE taken=0",
-        (err, rows) => {
+  const result = await db.query(
+    "SELECT * FROM medicines WHERE taken=false"
+  );
 
-            if (err) return console.error(err);
+  result.rows.forEach(m => {
+    console.log("Reminder:", m.name);
+  });
 
-            rows.forEach(m => {
-                console.log(`🔔 Reminder triggered for ${m.name}`);
-            });
-        }
-    );
 });
 
 console.log("Reminder system started ⏰");
 
 // =======================
 // ROOT
-// =======================
-app.get("/", (req, res) => {
-    res.send("Welcome to MediBridge API 🚀");
+app.get("/", (_req, res) => {
+  res.send("MediBridge API Running");
 });
 
-// =======================
-// START SERVER
-// =======================
+// SERVER
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT} 🚀`);
+  console.log("Server running on port", PORT);
 });
