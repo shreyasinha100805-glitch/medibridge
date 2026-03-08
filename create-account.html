@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <title>MediBridge | Create Account</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
@@ -26,24 +25,6 @@
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
             text-align: center;
-            animation: fadeIn 0.6s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
         }
 
         input,
@@ -54,7 +35,6 @@
             margin: 8px 0;
             border-radius: 10px;
             border: 1px solid #ccc;
-            font-size: 14px;
         }
 
         button {
@@ -63,7 +43,6 @@
             font-weight: bold;
             border: none;
             cursor: pointer;
-            transition: 0.3s;
         }
 
         button:hover {
@@ -71,9 +50,8 @@
         }
 
         .message {
-            margin-top: 10px;
             font-weight: bold;
-            font-size: 14px;
+            margin-top: 10px;
         }
 
         .success {
@@ -91,11 +69,6 @@
             cursor: pointer;
             text-decoration: underline;
         }
-
-        .strength {
-            font-size: 12px;
-            text-align: left;
-        }
     </style>
 </head>
 
@@ -105,7 +78,6 @@
 
         <h2 id="title">🩺 Create MediBridge Account</h2>
 
-        <!-- Language -->
         <select onchange="changeLanguage(this.value)">
             <option value="en">English</option>
             <option value="bn">বাংলা</option>
@@ -114,9 +86,7 @@
 
         <input type="text" id="username" placeholder="Username">
         <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password" onkeyup="checkStrength()">
-        <div id="strength" class="strength"></div>
-
+        <input type="password" id="password" placeholder="Password">
         <input type="password" id="confirm" placeholder="Confirm Password">
 
         <select id="role">
@@ -129,13 +99,13 @@
 
         <p id="message" class="message"></p>
 
-        <span class="link" onclick="goToLogin()" id="loginLink">Already have account? Login</span>
+        <span class="link" onclick="goToLogin()" id="loginLink">
+            Already have account? Login
+        </span>
 
     </div>
 
     <script>
-
-        let currentLang = "en";
 
         const translations = {
             en: {
@@ -156,26 +126,11 @@
         };
 
         function changeLanguage(lang) {
-            currentLang = lang;
+
             document.getElementById("title").innerText = translations[lang].title;
             document.getElementById("createBtn").innerText = translations[lang].create;
             document.getElementById("loginLink").innerText = translations[lang].login;
-        }
 
-        function checkStrength() {
-            let password = document.getElementById("password").value;
-            let strength = document.getElementById("strength");
-
-            if (password.length < 6) {
-                strength.innerHTML = "Weak Password";
-                strength.style.color = "red";
-            } else if (password.match(/[A-Z]/) && password.match(/[0-9]/)) {
-                strength.innerHTML = "Strong Password";
-                strength.style.color = "green";
-            } else {
-                strength.innerHTML = "Medium Password";
-                strength.style.color = "orange";
-            }
         }
 
         async function createAccount() {
@@ -187,65 +142,71 @@
             const role = document.getElementById("role").value;
             const message = document.getElementById("message");
 
-            message.className = "message";
             message.innerText = "";
+            message.className = "message";
 
-            // Validation
             if (!username || !email || !password || !confirm || !role) {
-                message.innerText = "Please fill all fields.";
+                message.innerText = "Please fill all fields";
                 message.classList.add("error");
                 return;
             }
 
             if (password !== confirm) {
-                message.innerText = "Passwords do not match.";
+                message.innerText = "Passwords do not match";
                 message.classList.add("error");
                 return;
             }
 
-        try {
-            const response = await fetch("http://localhost:3000/signup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    username,
-                    email,
-                    password,
-                    role   // "patient" or "caretaker"
-                })
-            });
+            try {
 
-            const data = await response.json();
+                const res = await fetch("http://localhost:3000/signup", {
 
-            if (!response.ok) {
-                message.innerText = data.message || "Signup failed.";
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        password,
+                        role
+                    })
+
+                });
+
+                const data = await res.json();
+
+                if (data.message !== "User created") {
+                    message.innerText = data.message;
+                    message.classList.add("error");
+                    return;
+                }
+
+                message.innerText = "Account created successfully!";
+                message.classList.add("success");
+
+                setTimeout(() => {
+                    window.location.href = "login.html";
+                }, 1500);
+
+            }
+            catch (err) {
+
+                message.innerText = "Cannot connect to server";
                 message.classList.add("error");
-                return;
+
             }
 
-            message.innerText = "Account Created Successfully! Redirecting to login...";
-            message.classList.add("success");
-
-            // Clear form
-            document.getElementById("username").value = "";
-            document.getElementById("email").value = "";
-            document.getElementById("password").value = "";
-            document.getElementById("confirm").value = "";
-            document.getElementById("role").value = "";
-
-            setTimeout(() => {
-                window.location.href = "login.html";
-            }, 1500);
-
-        } catch (error) {
-            message.innerText = "Cannot connect to server. Make sure backend is running.";
-            message.classList.add("error");
-        }
         }
 
         function goToLogin() {
+
             window.location.href = "login.html";
+
         }
+
     </script>
 
 </body>
