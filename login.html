@@ -180,38 +180,53 @@
 
         async function login() {
 
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
             const role = document.getElementById("role").value;
 
-            const res = await fetch("https://medibridge-backend.onrender.com/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email,
-                    password
-                })
-            });
-
-            const data = await res.json();
-
-            if (!data.token) {
-                alert(data.message);
+            if (!email || !password) {
+                alert("Please enter email and password");
                 return;
             }
 
-            // SAVE LOGIN DATA
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("userId", data.userId);
-            localStorage.setItem("role", data.role);
-            localStorage.setItem("username", data.username);
+            try {
 
-            window.location.href = "dashboard.html";
+                const res = await fetch(
+                    "https://medibridge-backend-nq9w.onrender.com/login",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password,
+                            role
+                        })
+                    }
+                );
+
+                const data = await res.json();
+
+                if (data.message) {
+                    alert(data.message);
+                    return;
+                }
+
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("userId", data.userId);
+                localStorage.setItem("role", data.role);
+                localStorage.setItem("username", data.username);
+
+                window.location.href = "dashboard.html";
+
+            } catch (err) {
+
+                alert("Cannot connect to server");
+
+            }
 
         }
-
     </script>
 
 </body>
