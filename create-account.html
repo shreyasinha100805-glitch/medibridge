@@ -159,22 +159,21 @@
 
             try {
 
-                const res = await fetch("https://medibridge-backend-nq9w.onrender.com/signup", {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        username,
-                        email,
-                        password,
-                        role
-                    })
-
-                });
+                const res = await fetch(
+                    "https://medibridge-backend-nq9w.onrender.com/signup",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        mode: "cors",
+                        body: JSON.stringify({
+                            username,
+                            email,
+                            password,
+                            role
+                        })
+                    });
 
                 const data = await res.json();
 
