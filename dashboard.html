@@ -410,33 +410,42 @@ ${m.taken
 
         async function viewMedicines(patientId) {
 
-            const res = await fetch(`https://medibridge-backend-nq9w.onrender.com/caretaker/medicines/${patientId}`);
+            console.log("Clicked patient ID:", patientId); // DEBUG
+
+            const res = await fetch(
+                `https://medibridge-backend-nq9w.onrender.com/caretaker/medicines/${patientId}`
+            );
 
             const meds = await res.json();
+
+            console.log("Medicines:", meds); // DEBUG
 
             const container = document.getElementById("patientMedicines");
 
             container.innerHTML = "";
 
+            if (meds.length === 0) {
+                container.innerHTML = "<li>No medicines found</li>";
+                return;
+            }
+
             meds.forEach(m => {
 
                 container.innerHTML += `
+        <li>
+            💊 ${m.name || "No Name"} - ${m.time || "--"}
 
-<li>
-
-💊 ${m.name} - ${m.time}
-
-${m.taken
-                        ? `<span style="color:green;font-weight:bold;">✅ Taken</span>`
-                        : `<span style="color:red;font-weight:bold;">❌ Not Taken</span>`}
-
-</li>
-
-`;
-
+            ${m.taken
+                        ? `<span style="color:green;font-weight:bold;"> ✅ Taken</span>`
+                        : `<span style="color:red;font-weight:bold;"> ❌ Not Taken</span>`
+                    }
+        </li>
+        `;
             });
 
         }
+
+
 
 
         /* ================= CARETAKER REPORT ================= */

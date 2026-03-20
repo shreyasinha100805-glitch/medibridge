@@ -274,6 +274,22 @@ app.get("/caretaker/patients/:caretakerId", async (req, res) => {
   res.json(result.rows);
 
 });
+app.get("/caretaker/medicines/:patientId", async (req, res) => {
+
+  try {
+    const result = await db.query(
+      "SELECT * FROM medicines WHERE user_id=$1 ORDER BY time",
+      [req.params.patientId]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching medicines" });
+  }
+
+});
 
 
 /// =======================
@@ -359,4 +375,27 @@ server.on("error", (err) => {
 
   console.error("❌ Server startup error:", err);
   process.exit(1);
+});
+
+
+// =======================
+// CARETAKER: GET PATIENT MEDICINES
+// =======================
+
+app.get("/caretaker/medicines/:patientId", async (req, res) => {
+
+  try {
+
+    const result = await db.query(
+      "SELECT * FROM medicines WHERE user_id=$1 ORDER BY time",
+      [req.params.patientId]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching medicines" });
+  }
+
 });
